@@ -1,4 +1,5 @@
 import type { PartialStrykerOptions } from "@stryker-mutator/api/core";
+import type { ArrayValues } from "type-fest";
 
 import { setHas } from "ts-extras";
 
@@ -15,9 +16,39 @@ export interface StrykerPluginOptions {
     };
     readonly vitest?: {
         readonly configFile?: string;
+        readonly dir?: string;
         readonly related?: boolean;
     };
 }
+
+/** Names of the package-owned Stryker presets. */
+export const strykerPresetNames: readonly [
+    "default",
+    "fast",
+    "strict",
+] = Object.freeze([
+    "default",
+    "fast",
+    "strict",
+]);
+
+/** A package-owned Stryker preset name. */
+export type StrykerPresetName = ArrayValues<typeof strykerPresetNames>;
+
+const assertStrykerPresetName = (preset: string): StrykerPresetName => {
+    switch (preset) {
+        case "default":
+        case "fast":
+        case "strict": {
+            return preset;
+        }
+        default: {
+            throw new RangeError(
+                `Unknown Stryker preset ${JSON.stringify(preset)}. Expected default, fast, or strict.`
+            );
+        }
+    }
+};
 
 const trueEnvironmentValues: ReadonlySet<string> = new Set([
     "1",
@@ -31,6 +62,24 @@ const warningDefaults = {
     unknownOptions: true,
     unserializableOptions: true,
 } as const;
+const presetOverrides: Readonly<
+    Record<StrykerPresetName, SharedStrykerOptions>
+> = {
+    default: {},
+    fast: {
+        checkers: [],
+        disableTypeChecks: true,
+        ignoreStatic: true,
+        vitest: {
+            related: true,
+        },
+    },
+    strict: {
+        typescriptChecker: {
+            prioritizePerformanceOverAccuracy: false,
+        },
+    },
+};
 
 // eslint-disable-next-line n/no-process-env -- executable config intentionally reads Stryker and CI environment
 const runtimeEnvironment: Readonly<NodeJS.ProcessEnv> = process.env;
@@ -121,23 +170,17 @@ const getBaseConfig = (
     };
 };
 
-/**
- * Create a fresh Stryker Vitest/TypeScript configuration.
- *
- * Known nested option objects are merged. Arrays supplied by the consumer
- * replace package defaults so plugin, reporter, checker, and mutation policy
- * stays explicit.
- */
-export function createStrykerConfig(
-    overrides: SharedStrykerOptions = {},
-    environment: Readonly<NodeJS.ProcessEnv> = runtimeEnvironment
-): SharedStrykerOptions {
-    const base = getBaseConfig(environment);
+const mergeStrykerOptions = (
+    base: Readonly<SharedStrykerOptions>,
+    overrides: Readonly<SharedStrykerOptions>
+): SharedStrykerOptions => {
+    const baseWarnings =
+        typeof base.warnings === "object" ? base.warnings : warningDefaults;
     const warnings =
         typeof overrides.warnings === "boolean"
             ? overrides.warnings
             : {
-                  ...warningDefaults,
+                  ...baseWarnings,
                   ...overrides.warnings,
               };
 
@@ -174,9 +217,55 @@ export function createStrykerConfig(
         },
         warnings,
     };
+};
+
+/** Create a fresh default Stryker Vitest/TypeScript configuration. */
+export function createStrykerConfig(
+    overrides: SharedStrykerOptions = {},
+    environment: Readonly<NodeJS.ProcessEnv> = runtimeEnvironment
+): SharedStrykerOptions {
+    return createStrykerPreset("default", overrides, environment);
+}
+
+/**
+ * Create a fresh named Stryker Vitest/TypeScript preset.
+ *
+ * Known nested option objects are merged. Arrays supplied by the consumer
+ * replace preset arrays so plugin, reporter, checker, and mutation policy stays
+ * explicit.
+ */
+export function createStrykerPreset(
+    preset: StrykerPresetName,
+    overrides: SharedStrykerOptions = {},
+    environment: Readonly<NodeJS.ProcessEnv> = runtimeEnvironment
+): SharedStrykerOptions {
+    const presetName = assertStrykerPresetName(preset);
+    const withPreset = mergeStrykerOptions(
+        getBaseConfig(environment),
+        presetOverrides[presetName]
+    );
+
+    return mergeStrykerOptions(withPreset, overrides);
 }
 
 /** Directly runnable package default. */
 export const strykerConfig: SharedStrykerOptions = createStrykerConfig();
+
+/** Fast local-iteration preset; not suitable for release mutation gates. */
+export const strykerFastConfig: SharedStrykerOptions =
+    createStrykerPreset("fast");
+
+/** Maximum-accuracy release and scheduled-run preset. */
+export const strykerStrictConfig: SharedStrykerOptions =
+    createStrykerPreset("strict");
+
+/** Directly runnable package configurations keyed by preset name. */
+export const strykerPresets: Readonly<
+    Record<StrykerPresetName, SharedStrykerOptions>
+> = {
+    default: strykerConfig,
+    fast: strykerFastConfig,
+    strict: strykerStrictConfig,
+};
 
 export default strykerConfig;

@@ -4,7 +4,19 @@ import nickTwoBadFourU from "eslint-config-nick2bad4u";
 const config = [
     ...nickTwoBadFourU.configs.all,
 
-    // Add repository-specific config entries below as needed.
+    {
+        languageOptions: {
+            parserOptions: {
+                projectService: {
+                    allowDefaultProject: [
+                        "*.{js,mjs,cjs}",
+                        ".*.{js,mjs,cjs}",
+                        "presets/*.mjs",
+                    ],
+                },
+            },
+        },
+    },
 ];
 
 export default config;

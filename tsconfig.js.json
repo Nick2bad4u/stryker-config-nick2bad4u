@@ -29,6 +29,8 @@
         "*.d.mts",
         "*.js",
         "*.mjs",
+        "presets/**/*.d.mts",
+        "presets/**/*.mjs",
         "test/**/*.mjs",
         "test/_internal/**/*.d.ts"
     ]

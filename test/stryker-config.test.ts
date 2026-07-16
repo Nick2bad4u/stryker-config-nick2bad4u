@@ -1,6 +1,17 @@
 import { describe, expect, it } from "vitest";
 
-import { createStrykerConfig, strykerConfig } from "../src/stryker-config.js";
+import directFastConfig from "../presets/stryker.fast.config.mjs";
+import directStrictConfig from "../presets/stryker.strict.config.mjs";
+import {
+    createStrykerConfig,
+    createStrykerPreset,
+    strykerConfig,
+    strykerFastConfig,
+    type StrykerPresetName,
+    strykerPresets,
+    strykerStrictConfig,
+} from "../src/stryker-config.js";
+import directDefaultConfig from "../stryker.config.mjs";
 
 const dashboardKey = [
     "STRYKER",
@@ -32,7 +43,10 @@ describe("stryker shared config", () => {
 
         const customized = createStrykerConfig({
             thresholds: { break: 80 },
-            vitest: { configFile: "./vitest.stryker.config.ts" },
+            vitest: {
+                configFile: "./vitest.stryker.config.ts",
+                dir: "packages",
+            },
         });
 
         expect(customized.thresholds).toStrictEqual({
@@ -42,6 +56,7 @@ describe("stryker shared config", () => {
         });
         expect(customized.vitest).toStrictEqual({
             configFile: "./vitest.stryker.config.ts",
+            dir: "packages",
             related: false,
         });
         expect(strykerConfig.thresholds).toHaveProperty("break", 65);
@@ -49,6 +64,63 @@ describe("stryker shared config", () => {
             "configFile",
             "./vitest.config.ts"
         );
+    });
+
+    it("provides fast and strict presets without mutating the default", () => {
+        expect.assertions(11);
+
+        const defaultSnapshot = structuredClone(strykerConfig);
+        const fast = createStrykerPreset("fast", {
+            mutate: ["packages/core/src/**/*.ts"],
+            vitest: { dir: "packages/core" },
+        });
+        const strict = createStrykerPreset("strict");
+
+        expect(fast.checkers).toStrictEqual([]);
+        expect(fast).toHaveProperty("disableTypeChecks", true);
+        expect(fast).toHaveProperty("ignoreStatic", true);
+        expect(fast).toHaveProperty("vitest.related", true);
+        expect(fast).toHaveProperty("vitest.dir", "packages/core");
+        expect(fast.mutate).toStrictEqual(["packages/core/src/**/*.ts"]);
+        expect(strict).toHaveProperty(
+            "typescriptChecker.prioritizePerformanceOverAccuracy",
+            false
+        );
+        expect(strict).toHaveProperty("ignoreStatic", false);
+        expect(strict).toHaveProperty("vitest.related", false);
+        expect(strykerConfig).toStrictEqual(defaultSnapshot);
+        expect(strykerPresets.default).toBe(strykerConfig);
+    });
+
+    it("applies consumer overrides after fast preset policy", () => {
+        expect.assertions(6);
+
+        const customized = createStrykerPreset("fast", {
+            checkers: ["typescript"],
+            disableTypeChecks: false,
+            ignoreStatic: false,
+            vitest: { related: false },
+        });
+
+        expect(customized.checkers).toStrictEqual(["typescript"]);
+        expect(customized).toHaveProperty("disableTypeChecks", false);
+        expect(customized).toHaveProperty("ignoreStatic", false);
+        expect(customized).toHaveProperty("vitest.related", false);
+        expect(strykerFastConfig).toHaveProperty("ignoreStatic", true);
+        expect(() =>
+            createStrykerPreset("unknown" as StrykerPresetName)
+        ).toThrow(RangeError);
+    });
+
+    it("ships fresh directly runnable files for every preset", () => {
+        expect.assertions(6);
+
+        expect(directDefaultConfig).toStrictEqual(strykerConfig);
+        expect(directFastConfig).toStrictEqual(strykerFastConfig);
+        expect(directStrictConfig).toStrictEqual(strykerStrictConfig);
+        expect(directDefaultConfig).not.toBe(strykerConfig);
+        expect(directFastConfig).not.toBe(strykerFastConfig);
+        expect(directStrictConfig).not.toBe(strykerStrictConfig);
     });
 
     it("enables dashboard reporting only when credentials are present", () => {

@@ -1,3 +1,23 @@
 {
-    "extends": "npm-package-json-lint-config-nick2bad4u"
+    "extends": "npm-package-json-lint-config-nick2bad4u",
+    "rules": {
+        "no-git-devDependencies": [
+            "error",
+            {
+                "exceptions": [
+                    "@typescript/native"
+                ]
+            }
+        ],
+        "prefer-caret-version-devDependencies": [
+            "error",
+            {
+                "exceptions": [
+                    "@typescript/native",
+                    "prettier-plugin-multiline-arrays",
+                    "vitest-environment-browser"
+                ]
+            }
+        ]
+    }
 }

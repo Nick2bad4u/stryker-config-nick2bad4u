@@ -3,10 +3,8 @@
 ## Setup
 
 ```sh
-npm ci --force
+npm ci
 ```
-
-The forced install is currently required where upstream optional peer ranges lag this repository's TypeScript toolchain.
 
 ## Before Opening a Pull Request
 

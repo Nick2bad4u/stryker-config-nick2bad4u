@@ -14,7 +14,11 @@ Keep the Stryker packages on the same version:
 npm install --save-dev @stryker-mutator/core @stryker-mutator/typescript-checker @stryker-mutator/vitest-runner stryker-config-nick2bad4u typescript@^6.0.3 vitest
 ```
 
-Stryker 9 still consumes TypeScript's programmatic compiler API. TypeScript 7's native package does not expose that legacy API, so consumers must keep the `typescript` peer on version 6.
+This package targets Stryker 10 and keeps its public `typescript` peer on version 6. Stryker 10's TypeScript 7 support is still experimental, so this shared release does not broaden its stable consumer contract yet.
+
+### Temporary `qs` security override
+
+`@stryker-mutator/core@10.0.0` selects `typed-rest-client@2.3.1`, which hard-pins `qs@6.15.1`. The root override keeps that external path on the API-compatible security patch `qs@6.15.3`. Remove the override once Stryker permits `typed-rest-client@3.1.0` or a compatible 2.x release that depends on `qs@6.15.3` or later; verify the resolved path with `npm explain qs` before removal.
 
 ## Direct usage
 
@@ -93,7 +97,7 @@ Programmatic consumers may also import the fresh factory outputs `strykerConfig`
 - `STRYKER_CONCURRENCY` accepts an explicit positive worker count. Otherwise the default is 2 in CI and 12 locally.
 - Consumer overrides are applied after preset policy. Known nested objects are merged, while arrays replace preset arrays.
 - Dashboard `full` reports include source and mutant details; use the reporter only when that upload is intended.
-- The stale `@stryker-ignorer/console-all` integration is not a default because its current release depends on the Stryker 8 API while this package targets Stryker 9.
+- The stale `@stryker-ignorer/console-all` integration is not a default because its current release depends on the Stryker 8 API while this package targets Stryker 10.
 
 ## Validation
 

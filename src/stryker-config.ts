@@ -35,6 +35,8 @@ export const strykerPresetNames: readonly [
 /** A package-owned Stryker preset name. */
 export type StrykerPresetName = ArrayValues<typeof strykerPresetNames>;
 
+type ProcessEnvironment = Readonly<Record<string, string | undefined>>;
+
 const assertStrykerPresetName = (preset: string): StrykerPresetName => {
     switch (preset) {
         case "default":
@@ -81,14 +83,15 @@ const presetOverrides: Readonly<
     },
 };
 
-// eslint-disable-next-line n/no-process-env -- executable config intentionally reads Stryker and CI environment
-const runtimeEnvironment: Readonly<NodeJS.ProcessEnv> = process.env;
+const runtimeEnvironment: ProcessEnvironment =
+    // eslint-disable-next-line n/no-process-env -- executable config intentionally reads Stryker and CI environment
+    process.env;
 
 const isEnabled = (value: string | undefined): boolean =>
     typeof value === "string" &&
     setHas(trueEnvironmentValues, value.toLowerCase());
 
-const getConcurrency = (environment: Readonly<NodeJS.ProcessEnv>): number => {
+const getConcurrency = (environment: ProcessEnvironment): number => {
     const configured = Math.trunc(
         Number(environment["STRYKER_CONCURRENCY"] ?? "")
     );
@@ -101,7 +104,7 @@ const getConcurrency = (environment: Readonly<NodeJS.ProcessEnv>): number => {
 };
 
 const getBaseConfig = (
-    environment: Readonly<NodeJS.ProcessEnv>
+    environment: ProcessEnvironment
 ): SharedStrykerOptions => {
     const hasDashboardApiKey =
         (environment["STRYKER_DASHBOARD_API_KEY"] ?? "").length > 0;
@@ -222,7 +225,7 @@ const mergeStrykerOptions = (
 /** Create a fresh default Stryker Vitest/TypeScript configuration. */
 export function createStrykerConfig(
     overrides: SharedStrykerOptions = {},
-    environment: Readonly<NodeJS.ProcessEnv> = runtimeEnvironment
+    environment: ProcessEnvironment = runtimeEnvironment
 ): SharedStrykerOptions {
     return createStrykerPreset("default", overrides, environment);
 }
@@ -237,7 +240,7 @@ export function createStrykerConfig(
 export function createStrykerPreset(
     preset: StrykerPresetName,
     overrides: SharedStrykerOptions = {},
-    environment: Readonly<NodeJS.ProcessEnv> = runtimeEnvironment
+    environment: ProcessEnvironment = runtimeEnvironment
 ): SharedStrykerOptions {
     const presetName = assertStrykerPresetName(preset);
     const withPreset = mergeStrykerOptions(

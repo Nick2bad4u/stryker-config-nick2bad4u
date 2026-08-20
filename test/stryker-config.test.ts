@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 import directFastConfig from "../presets/stryker.fast.config.mjs";
@@ -19,7 +20,93 @@ const dashboardKey = [
     "API_KEY",
 ].join("_");
 
+const readJsonRecord = (url: URL): Readonly<Record<string, unknown>> => {
+    const value: unknown = JSON.parse(readFileSync(url, "utf8"));
+
+    if (typeof value !== "object" || value === null || Array.isArray(value)) {
+        throw new TypeError(`Expected an object in ${url.href}.`);
+    }
+
+    return value as Readonly<Record<string, unknown>>;
+};
+
+const readStringProperty = (
+    value: Readonly<Record<string, unknown>>,
+    property: string
+): string => {
+    const result = value[property];
+
+    if (typeof result !== "string") {
+        throw new TypeError(`Expected ${property} to be a string.`);
+    }
+
+    return result;
+};
+
+const readRecordProperty = (
+    value: Readonly<Record<string, unknown>>,
+    property: string
+): Readonly<Record<string, unknown>> => {
+    const result = value[property];
+
+    if (
+        typeof result !== "object" ||
+        result === null ||
+        Array.isArray(result)
+    ) {
+        throw new TypeError(`Expected ${property} to be an object.`);
+    }
+
+    return result as Readonly<Record<string, unknown>>;
+};
+
 describe("stryker shared config", () => {
+    it("keeps the published Stryker 10 contract aligned with installed packages", () => {
+        expect.assertions(8);
+
+        const packageJson = readJsonRecord(
+            new URL("../package.json", import.meta.url)
+        );
+        const peerDependencies = readRecordProperty(
+            packageJson,
+            "peerDependencies"
+        );
+        const strykerPeerPackages = [
+            "@stryker-mutator/core",
+            "@stryker-mutator/typescript-checker",
+            "@stryker-mutator/vitest-runner",
+        ] as const;
+
+        for (const packageName of strykerPeerPackages) {
+            const installedPackage = readJsonRecord(
+                new URL(
+                    `../node_modules/${packageName}/package.json`,
+                    import.meta.url
+                )
+            );
+
+            expect(readStringProperty(installedPackage, "version")).toBe(
+                "10.0.0"
+            );
+            expect(readStringProperty(peerDependencies, packageName)).toBe(
+                "^10.0.0"
+            );
+        }
+
+        const apiPackage = readJsonRecord(
+            new URL(
+                "../node_modules/@stryker-mutator/api/package.json",
+                import.meta.url
+            )
+        );
+        const dependencies = readRecordProperty(packageJson, "dependencies");
+
+        expect(readStringProperty(apiPackage, "version")).toBe("10.0.0");
+        expect(readStringProperty(dependencies, "@stryker-mutator/api")).toBe(
+            "^10.0.0"
+        );
+    });
+
     it("contains no source-repository identity or dead reporter options", () => {
         expect.assertions(6);
 

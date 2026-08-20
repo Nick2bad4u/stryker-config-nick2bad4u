@@ -180,7 +180,7 @@
     "devEngines": {
         "runtime": {
             "name": "node",
-            "version": "26.7.0",
+            "version": "^22.22.3 || ^24.16.0 || >=26.3.0",
             "onFail": "error"
         },
         "packageManager": {

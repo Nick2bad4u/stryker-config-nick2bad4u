@@ -1,0 +1,7 @@
+[format.rules]
+    array-bracket-space-width       = 1
+    indent-style                    = "space"
+    indent-table-key-value-pairs    = true
+    indent-width                    = 4
+    key-value-equals-sign-alignment = true
+    line-ending                     = "lf"
